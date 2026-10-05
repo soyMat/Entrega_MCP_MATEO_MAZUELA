@@ -23,24 +23,43 @@ def register_prompts(mcp: MCPServer) -> None:
             student_email: correo del estudiante, si ya se conoce.
                 Vacío = el modelo debe pedirlo antes de inscribir.
         """
-        # TODO(alumno): devolver una lista de mensajes {"role": ..., "content": ...}
-        # que guíe al modelo por este flujo, usando las capacidades del servidor:
-        #   1. Leer el resource `activities://available` para el catálogo inicial.
-        #   2. Usar la tool `search_activities` con `query` para afinar
-        #      (recordar `only_available=True` por defecto).
-        #   3. Leer el resource template `activities://{activity_id}` para el
-        #      detalle de la candidata elegida.
-        #   4. Pedir confirmación explícita y el `student_email` si falta.
-        #   5. Usar la tool `register_for_activity` y comunicar el resultado,
-        #      incluyendo los casos de error (cupo lleno, ya inscripto,
-        #      email inválido, actividad inexistente).
-        # El prompt NO llama al service layer ni inscribe directamente:
-        # sólo devuelve mensajes. Incluí `query` y `student_email` en el texto
-        # cuando vengan dados. Mantené el tono en español rioplatense.
-        _ = (query, student_email)
+        normalized_query = str(query or "").strip()
+        normalized_email = str(student_email or "").strip()
+        search_instruction = (
+            f'Busca actividades relacionadas con "{normalized_query}".'
+            if normalized_query
+            else "Mostrame todas las actividades disponibles."
+        )
+        email_context = (
+            f"El correo informado es `{normalized_email}`."
+            if normalized_email
+            else "Todavia no informe mi correo; pedimelo antes de inscribirme."
+        )
+
         return [
             {
                 "role": "user",
-                "content": "TODO(alumno): reemplazar por el flujo guiado de inscripción.",
-            }
+                "content": (
+                    "Quiero encontrar una actividad y, si me convence, inscribirme. "
+                    f"{search_instruction} {email_context}"
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Guiame de manera clara y en este orden:\n"
+                    "1. Lee el resource `activities://available` para mostrarme el catalogo.\n"
+                    "2. Usa la tool `search_activities` con la busqueda indicada y "
+                    "`only_available=True`.\n"
+                    "3. Cuando elija una opcion, lee el resource "
+                    "`activities://{activity_id}` y explicame su detalle.\n"
+                    "4. Antes de cambiar datos, pedime una confirmacion explicita y, "
+                    "si todavia falta, el correo. No interpretes la eleccion de una "
+                    "actividad como permiso para inscribir.\n"
+                    "5. Solo despues de mi confirmacion, usa la tool "
+                    "`register_for_activity` con `activity_id` y `student_email`, y "
+                    "comunica el resultado. Si falla, explica si no existe la actividad, "
+                    "el correo es invalido, no hay cupo o ya estoy inscripto."
+                ),
+            },
         ]
