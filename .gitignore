@@ -28,11 +28,10 @@ media/
 staticfiles/
 local_settings.py
 
-# Env / secrets — ver opencode.example.json
+# Env / secrets
 .env
 .env.*
 !.env.example
-opencode.json
 mcp.json
 
 # Node (MCP Inspector via npx)
